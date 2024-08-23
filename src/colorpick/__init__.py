@@ -3,7 +3,6 @@ import textwrap
 from collections import namedtuple
 from dataclasses import dataclass, field
 from typing import Any, Container, Generic, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
-from colorama import Fore, Style
 
 __all__ = ["Picker", "pick", "Option"]
 
@@ -110,7 +109,7 @@ class Picker(Generic[OPTION_T]):
         lines: List[str] = []
         for index, option in enumerate(self.options):
             if index == self.index:
-                prefix = f"{Fore.GREEN}{self.indicator}{Style.RESET_ALL}"
+                prefix = self.indicator
             else:
                 prefix = len(self.indicator) * " "
 
@@ -123,10 +122,7 @@ class Picker(Generic[OPTION_T]):
                 prefix = f"{prefix} {symbol}"
 
             option_as_str = option.label if isinstance(option, Option) else option
-            line = f"{prefix} {option_as_str}"
-            if index == self.index:
-                line = f"{Fore.CYAN}{line}{Style.RESET_ALL}"
-            lines.append(line)
+            lines.append(f"{prefix} {option_as_str}")
 
         return lines
 
@@ -165,8 +161,8 @@ class Picker(Generic[OPTION_T]):
         title_length = len(self.get_title_lines(max_width=max_x))
 
         for i, line in enumerate(lines_to_draw):
-            if description_present and i > title_length:
-                screen.addnstr(y, x, line, max_x // 2 - 2)
+            if i == self.index + title_length:
+                screen.addnstr(y, x, line, max_x - 2, curses.color_pair(1))
             else:
                 screen.addnstr(y, x, line, max_x - 2)
             y += 1
@@ -183,6 +179,12 @@ class Picker(Generic[OPTION_T]):
     def run_loop(
         self, screen: "curses._CursesWindow", position: Position
     ) -> Union[List[PICK_RETURN_T], PICK_RETURN_T]:
+        # Initialize color pairs
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(1, curses.COLOR_CYAN, -1)  # Cyan text, default background
+        curses.init_pair(2, curses.COLOR_WHITE, -1) # White text, default background
+        
         while True:
             self.draw(screen)
             c = screen.getch()
@@ -207,9 +209,12 @@ class Picker(Generic[OPTION_T]):
 
     def config_curses(self) -> None:
         try:
+            # use the default colors of the terminal
             curses.use_default_colors()
+            # hide the cursor
             curses.curs_set(0)
         except:
+            # Curses failed to initialize color support, eg. when TERM=vt100
             curses.initscr()
 
     def _start(self, screen: "curses._CursesWindow"):
