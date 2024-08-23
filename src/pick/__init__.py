@@ -3,9 +3,9 @@ import textwrap
 from collections import namedtuple
 from dataclasses import dataclass, field
 from typing import Any, Container, Generic, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
+from colorama import Fore, Style
 
 __all__ = ["Picker", "pick", "Option"]
-
 
 @dataclass
 class Option:
@@ -13,7 +13,6 @@ class Option:
     value: Any = None
     description: Optional[str] = None
     enabled: bool = True
-
 
 KEYS_ENTER = (curses.KEY_ENTER, ord("\n"), ord("\r"))
 KEYS_UP = (curses.KEY_UP, ord("k"))
@@ -111,7 +110,7 @@ class Picker(Generic[OPTION_T]):
         lines: List[str] = []
         for index, option in enumerate(self.options):
             if index == self.index:
-                prefix = self.indicator
+                prefix = f"{Fore.GREEN}{self.indicator}{Style.RESET_ALL}"
             else:
                 prefix = len(self.indicator) * " "
 
@@ -124,7 +123,10 @@ class Picker(Generic[OPTION_T]):
                 prefix = f"{prefix} {symbol}"
 
             option_as_str = option.label if isinstance(option, Option) else option
-            lines.append(f"{prefix} {option_as_str}")
+            line = f"{prefix} {option_as_str}"
+            if index == self.index:
+                line = f"{Fore.CYAN}{line}{Style.RESET_ALL}"
+            lines.append(line)
 
         return lines
 
@@ -205,12 +207,9 @@ class Picker(Generic[OPTION_T]):
 
     def config_curses(self) -> None:
         try:
-            # use the default colors of the terminal
             curses.use_default_colors()
-            # hide the cursor
             curses.curs_set(0)
         except:
-            # Curses failed to initialize color support, eg. when TERM=vt100
             curses.initscr()
 
     def _start(self, screen: "curses._CursesWindow"):
